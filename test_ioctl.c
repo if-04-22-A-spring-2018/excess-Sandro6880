@@ -6,68 +6,61 @@
 #include <stdbool.h>
 
 //Declarations
-
+void print_page(FILE *file, struct winsize *ws);
+void flip_pages(FILE *file, struct winsize *ws, int page);
 //int check_line_length(char* filename,int pos);
 //bool check_if_newline(char* input,int count);
 char buffer[20] = {0};
 int	main(int argc,char *argv[])
 {
+	FILE* fd = fopen(argv[1],"r");
 	struct winsize ws;
 	if (ioctl(0,TIOCGWINSZ,&ws)!=0) {
 		fprintf(stderr,"TIOCGWINSZ:%s\n",strerror(errno));
 		exit(-1);
 	}
+	flip_pages(fd, &ws, 0);
 	printf("row=%d, col=%d, xpixel=%d, ypixel=%d\n",
 	ws.ws_row,ws.ws_col,ws.ws_xpixel,ws.ws_ypixel);
 
-	FILE* fd = fopen(argv[1],"r");
+
 	//printf("%s\n",argv[1]); nur zum probieren ob es die richtige File nimmt.
-
-	printf("\n");
-	int line = 0;
-	int page_number = 0;
-	char* input;
-	bool end = false;
-	while(!end)
-	{
-		//int length = check_line_length(argv[1],pos);
-		//pos = length;
-		if(feof(fd))
-		{
-			printf("You have reached the last page of this text.\n");
-			end = true;
-		}
-		else if(line != ws.ws_row-2)
-		{
-			char* string = fgets(buffer,ws.ws_col,fd);
-			line++;
-			if(string == buffer)
-			{
-				printf("%s",string);
-			}
-		}
-		else{
-			printf("Write 'return' to go to the next page, or write 'b return' to go back a page\n");
-			scanf("%c",input);
-			if(input == 'return'){line = 0;page_number++;}
-			else if(input == 'b return' && page_number != 0){
-				page_number--;
-				line = 0;
-			}
-			else{
-				printf("This action was not possible\n");
-			}
-		}
-
-		//end = check_if_newline(buffer,read_count);Aufrufen der Probe Funktion "check_if_newline".
-	}
-
-
-
-
 
 	fclose(fd);
 	return 0;
+}
+void print_page(FILE *file, struct winsize *ws) {
+    char *buffer = malloc(sizeof(char) * (ws->ws_col + 1));
+    for (int i = 0; i < ws->ws_row && !feof(file); i++) {
+        fgets(buffer, ws->ws_col, file);
+        printf("%s", buffer);
+    }
+    free(buffer);
+}
+
+void flip_pages(FILE *file, struct winsize *ws, int page) {
+    rewind(file);
+    if (file == 0)return;
+    char c;
+    int count = 0;
+    while (count <= page) {
+        system("clear");
+        print_page(file, ws);
+        count++;
+    }
+    c = getchar();
+    if (c == '\n' && !feof(file)) {
+        flip_pages(file, ws, page + 1);
+    } else if (c == 'b' && page > 0) {
+        while (c != '\n')
+            c = getchar();
+        flip_pages(file, ws, page - 1);
+    } else if (c != '\n') {
+        while (c != '\n')
+            c = getchar();
+        flip_pages(file, ws, page);
+    }
+
 }
 /*int check_line_length(char* filename,int pos)
 {
